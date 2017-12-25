@@ -151,7 +151,7 @@ ${body}
 
 sub error {
   print "Status: 500 Internal server error\n";
-  print createPage($_[0]);
+  print createPage($_[0], {'scriptbase' => $vars{'scriptbase'}});
   exit(0);
 }
 
