@@ -17,8 +17,14 @@ use File::stat;
 use Date::Format;
 use Date::Parse qw(str2time);
 
-open(DEBUGLOG, '>>', '/tmp/pDebug.log') || die;
-say DEBUGLOG "Session start";
+sub logg {
+  if ($vars{'logfile'}) {
+    if ($_[0]>=$logLevel) {
+      say LOG dbgLevel2String($_[0]).": ".$_[1];
+    }
+  }
+}
+
 $fName=$ENV{'PATH_INFO'};
 $lName=$ENV{'PATH_TRANSLATED'};
 
@@ -43,6 +49,7 @@ Last-modified: ${lmTime}
        'caching' => undef,
        'debug' => undef,
        'help' => undef,
+       'logfile' => undef,
        'preload' => undef,
        'raw' => undef,
        'scriptbase' => '//bits.efn.no',
@@ -53,6 +60,7 @@ Last-modified: ${lmTime}
        'caching' => 'Caching enabled. Default __on__.',
        'debug' => 'Show a list of debug variables. Default __off__.',
        'help' => 'Show this help text. Default __off__.',
+       'logfile' => 'Log destination file. Default *None*.',
        'preload' => 'Uses static knowledge of `strapdown.js` to speed up page loading. Default __on__',
        'raw' => 'Display the raw *Markdown*. Default __off__.',
        'scriptbase' => 'Where all the scripts are located. Default `//bits.efn.no`. This will probably change in the future',
@@ -75,6 +83,19 @@ if ($suffix eq "mdh" )
   }
   $body=$line;
 }
+
+use constant {
+ DEBUG => 0,
+ INFO => 1,
+};
+
+$logLevel=DEBUG;
+
+if ($vars{'logfile'}) {
+  open(LOG, '>>', $vars{'logfile'}) || die;
+  logg INFO, "Start logging";
+}
+
 local $/;
 $body.=<CONTENT>;
 close(CONTENT);
@@ -88,9 +109,9 @@ sub createRaw {
   my $body=shift;
   my $vars=shift;
 
-  say DEBUGLOG "Caching is defined as ".$vars->{'caching'};
+  log DEBUG, "Caching is defined as ".$vars->{'caching'};
   my $cache=(! defined($vars->{'caching'})) || str2bool($vars->{'caching'});
-  say DEBUGLOG "Caching: ".$cache;
+  logg DEBUG, "Caching: ".$cache;
   $lmTime=undef if (! $cache);
 
   return "Content-type: text/plain
@@ -103,7 +124,7 @@ ${body}
 sub createPage {
   my $body=shift;
   my $vars=shift;
-  say DEBUGLOG "RAW:". $vars->{'raw'};
+  logg DEBUG, "RAW:". $vars->{'raw'};
   if (str2bool($vars->{'raw'})) {
     return createRaw($body, $vars);
   }
@@ -115,9 +136,9 @@ sub createPage {
     ($vars->{'theme'})='efn';
   }
 
-  say DEBUGLOG "Caching is defined as ".$vars->{'caching'};
+  logg DEBUG, "Caching is defined as ".$vars->{'caching'};
   my $cache=(! defined($vars->{'caching'})) || str2bool($vars->{'caching'});
-  say DEBUGLOG "Caching: ".$cache;
+  logg DEBUG, "Caching: ".$cache;
   $lmTime=undef if (! $cache);
   my $scriptbase=$vars->{'scriptbase'};
   my $theme=$vars->{'theme'};
@@ -130,8 +151,8 @@ sub createPage {
     #$preload.="<style>.navbar{display:none}</style>";
 
   }
-  say DEBUGLOG $preload;
-  say DEBUGLOG "hei";
+  logg DEBUG, $preload;
+  logg DEBUG, "hei";
   return "Content-type: text/html
 ${lmTime}
 
@@ -185,15 +206,14 @@ sub dumpDict {
 
 sub str2bool {
   my $value=shift;
-  say DEBUGLOG "str2bool";
-  say DEBUGLOG $value;
+  logg DEBUG, "str2bool: ${value}";
   return 0 if (!$value);
   $value=lc $value;
   return 0 if ($value eq "false");
   return 0 if ($value eq "off");
   return 0 if ($value eq "disabled");
   return 0 if ($value eq "unset");
-  say DEBUGLOG "Returning true";
+  logg DEBUG, "Returning true";
   return 1;
 }
 
@@ -224,4 +244,13 @@ sub help {
   $text.=dumpDict(\%helpstr);
   print createPage($text, { 'title' => 'HELP', 'caching' => false, 'scriptbase' => $vars{'scriptbase'} });
   exit(0);
+}
+
+sub dbgLevel2String {
+ if ($_[0] == DEBUG) {
+   return "DEBUG";
+ }
+ elsif ($_[0] == INFO) {
+   return "INFO";
+ }
 }
