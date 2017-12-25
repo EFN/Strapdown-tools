@@ -22,10 +22,6 @@ say DEBUGLOG "Session start";
 $fName=$ENV{'PATH_INFO'};
 $lName=$ENV{'PATH_TRANSLATED'};
 
-#print "Status: 401 Uautorisert\n";
-#createPage("hei");
-#exit(0);
-
 $mtime = stat($lName)->mtime;
 
 $lmTime=time2str("Last-Modified: %a, %d %b %Y %H:%M:%S GMT", $mtime, "GMT");
