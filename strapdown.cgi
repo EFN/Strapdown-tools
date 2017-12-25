@@ -50,6 +50,7 @@ Last-modified: ${lmTime}
        'debug' => undef,
        'help' => undef,
        'logfile' => undef,
+       'loglevel' => undef,
        'preload' => undef,
        'raw' => undef,
        'scriptbase' => '//bits.efn.no',
@@ -61,6 +62,7 @@ Last-modified: ${lmTime}
        'debug' => 'Show a list of debug variables. Default __off__.',
        'help' => 'Show this help text. Default __off__.',
        'logfile' => 'Log destination file. Default *None*.',
+       'logfile' => 'Log level. Available values are `DEBUG` and `INFO`. Default `INFO`.',
        'preload' => 'Uses static knowledge of `strapdown.js` to speed up page loading. Default __on__',
        'raw' => 'Display the raw *Markdown*. Default __off__.',
        'scriptbase' => 'Where all the scripts are located. Default `//bits.efn.no`. This will probably change in the future',
@@ -85,15 +87,24 @@ if ($suffix eq "mdh" )
 }
 
 use constant {
- DEBUG => 0,
- INFO => 1,
+ DEBUG => 1,
+ INFO => 2,
 };
 
-$logLevel=DEBUG;
+if ($vars{'loglevel'}) {
+  $logLevel=string2DbgLevel($vars{'loglevel'});
+  if (!$logLevel) {
+    error("# invalid value for 'loglevel':".$vars{'loglevel'});
+  }
+}
+else {
+  $logLevel=INFO;
+}
 
 if ($vars{'logfile'}) {
   open(LOG, '>>', $vars{'logfile'}) || die;
   logg INFO, "Start logging";
+  logg INFO, "Loglevel is: ".dbgLevel2String($logLevel);
 }
 
 local $/;
@@ -151,7 +162,7 @@ sub createPage {
     #$preload.="<style>.navbar{display:none}</style>";
 
   }
-  logg DEBUG, "PRELOAD: ".$preload;
+  logg INFO, "PRELOAD: ".$preload;
 
   return "Content-type: text/html
 ${lmTime}
@@ -253,4 +264,15 @@ sub dbgLevel2String {
  elsif ($_[0] == INFO) {
    return "INFO";
  }
+}
+
+sub string2DbgLevel {
+ my $str=uc $_[0];
+ if ($str eq 'DEBUG') {
+   return DEBUG;
+ }
+ elsif ($str eq 'INFO') {
+   return INFO;
+ }
+ return undef;
 }
