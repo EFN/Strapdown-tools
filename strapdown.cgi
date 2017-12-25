@@ -124,7 +124,7 @@ ${body}
 sub createPage {
   my $body=shift;
   my $vars=shift;
-  logg DEBUG, "RAW:". $vars->{'raw'};
+  logg DEBUG, "raw value is: '". $vars->{'raw'}."'";
   if (str2bool($vars->{'raw'})) {
     return createRaw($body, $vars);
   }
@@ -151,8 +151,8 @@ sub createPage {
     #$preload.="<style>.navbar{display:none}</style>";
 
   }
-  logg DEBUG, $preload;
-  logg DEBUG, "hei";
+  logg DEBUG, "PRELOAD: ".$preload;
+
   return "Content-type: text/html
 ${lmTime}
 
@@ -206,7 +206,7 @@ sub dumpDict {
 
 sub str2bool {
   my $value=shift;
-  logg DEBUG, "str2bool: ${value}";
+  logg DEBUG, "str2bool: '${value}'";
   return 0 if (!$value);
   $value=lc $value;
   return 0 if ($value eq "false");
