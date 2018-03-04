@@ -17,6 +17,12 @@ use File::stat;
 use Date::Format;
 use Date::Parse qw(str2time);
 
+sub trim {
+  my $res=$_[0];
+  $res=~s/^\s+|\s+$//g;
+  return $res;
+}
+
 sub logg {
   if ($vars{'logfile'}) {
     if ($_[0]>=$logLevel) {
@@ -57,6 +63,14 @@ Last-modified: ${lmTime}
        'theme' => undef,
        'title' => undef,
 );
+%can_override=(
+       'debug' => 1,
+       'help' => 1,
+       'preload' => 1,
+       'raw' => 1,
+       'theme' => 1,
+       'title' => 1,
+);
 %helpstr=(
        'caching' => 'Caching enabled. Default __on__.',
        'debug' => 'Show a list of debug variables. Default __off__.',
@@ -84,6 +98,32 @@ if ($suffix eq "mdh" )
     }
   }
   $body=$line;
+}
+
+%params;
+foreach (split('&', $ENV{'QUERY_STRING'})) {
+  (my $key, my $value)=split('=',$_);
+  $params{$key}=($value)?"1":"0";
+}
+
+$QSTRING="";
+foreach (sort keys %params) {
+  if ($can_override{$_}) {
+    $vars{$_}=$params{$_};
+    $QSTRING.="&" if ($QSTRING);
+    $QSTRING.=sprintf("%s=%s",$_,$params{$_});
+  }
+}
+
+if ($QSTRING ne $ENV{'QUERY_STRING'}) {
+  #print "Status: 307 Temporary Redirect\n";
+  print "Status: 308 Permanent Redirect\n";
+  printf "Cache-Control: max-age=%d\n", 7*24*60*60;
+  printf "Location: %s?%s\n", $ENV{'REDIRECT_URL'}, $QSTRING;
+  print "Content-type: text/plain\n";
+  print "\n";
+  print "Normalizing URL\n";
+  exit(0);
 }
 
 use constant {
@@ -164,7 +204,7 @@ sub createPage {
   }
   logg INFO, "PRELOAD: ".$preload;
 
-  return "Content-type: text/html
+  return "Content-type: text/html; charset=utf-8
 ${lmTime}
 
 <!DOCTYPE html>
@@ -188,17 +228,31 @@ sub error {
 }
 
 sub dumpDict {
+  my $headers=shift;
   my $dict=shift;
+  my $dict2=shift;
 
-  $km=length("VARIABLE");
-  $vm=length("VALUE");
+  $km=length($headers->[0]);
+  $vm=length($headers->[1]);
+  $vm2=length($headers->[2]);
   foreach (keys %{$dict}) {
     my $l=length($_);
     $km=$l if ($l>$km);
     $l=length($dict->{$_});
     $vm=$l if ($l>$vm);
   }
-  my $text=sprintf("|%-${km}s|%-${vm}s|\n","VARIABLE", "VALUE");
+  if ($dict2) {
+    foreach (keys %{$dict}) {
+      my $l=length($_);
+      $l=length($dict2->{$_});
+      $vm2=$l if ($l>$vm);
+    }
+  }
+  my $text=sprintf("|%-${km}s|%-${vm}s",$headers->[0],$headers->[1]);
+  if ($dict2) {
+    $text.=sprintf("|%-${vm2}s",$headers->[2]);
+  }
+  $text.=sprintf("|\n");
   $text.="|";
   for ($i=0;$i<$km;$i++) {
     $text.="-";
@@ -207,9 +261,19 @@ sub dumpDict {
   for ($i=0;$i<$vm;$i++) {
     $text.="-";
   }
+  if ($dict2) {
+    $text.="|";
+    for ($i=0;$i<$vm2;$i++) {
+      $text.="-";
+    }
+  }
   $text.="|\n";
   foreach (sort keys %{$dict}) {
-    $text.=sprintf("|%-${km}s|%-${vm}s|\n",$_, $dict->{$_});
+    $text.=sprintf("|%-${km}s|%-${vm}s",$_, $dict->{$_});
+    if ($dict2) {
+      $text.=sprintf("|%-${vm2}s",$dict2->{$_});
+    }
+    $text.="|\n";
   }
 
   return $text;
@@ -231,29 +295,31 @@ sub str2bool {
 sub debug {
   my $text="#DEBUG\n\n";
   $text.="##Page variables\n\n";
-  $text.=dumpDict(\%vars);
+  $text.=dumpDict(['Variable', 'Value', 'Can override'],\%vars, \%can_override);
   $text.="\n";
   $text.="##Server variables\n\n";
-  $text.=dumpDict(\%ENV);
+  $text.=dumpDict(['Variable', 'Value'],\%ENV);
   $text.="\n";
   $text.="##Other stuff\n\n";
   $whoami=`whoami`;
   chop($whoami);
-  $text.=dumpDict(
+  $text.=dumpDict(['Variable', 'Value'],
 		  {
 		   'whoami' => $whoami,
-		   'cwd' => `pwd`,
+		   'cwd' => trim(`pwd`),
 		  });
-  
-  print createPage($text, { 'title' => 'DEBUG', 'caching' => false, 'scriptbase' => $vars{'scriptbase'}});
+
+  my %pass=(%vars,( 'title' => 'DEBUG', 'caching' => false, 'debug' => undef));
+  print createPage($text, \%pass);
   exit(0);
 }
 
 sub help {
   my $text="#HELP\n";
   $text.="##Page variables\n";
-  $text.=dumpDict(\%helpstr);
-  print createPage($text, { 'title' => 'HELP', 'caching' => false, 'scriptbase' => $vars{'scriptbase'} });
+  $text.=dumpDict(['Variable', 'Explanation'],\%helpstr);
+  my %pass=(%vars,( 'title' => 'HELP', 'caching' => false));
+  print createPage($text, \%pass);
   exit(0);
 }
 
