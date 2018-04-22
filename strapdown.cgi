@@ -200,9 +200,9 @@ sub createPage {
   my $theme=$vars->{'theme'};
   my $preload="";
   if ((! defined($vars->{'preload'})) || str2bool($vars->{'preload'})) {
-    $preload="  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.2/strapdown.css\" as=\"style\">
-  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.2/themes/bootstrap-responsive.min.css\" as=\"style\">
-  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.2/themes/${theme}.min.css\" as=\"style\">
+    $preload="  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.3/strapdown.css\" as=\"style\">
+  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.3/themes/bootstrap-responsive.min.css\" as=\"style\">
+  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.3/themes/${theme}.min.css\" as=\"style\">
 ";
     #$preload.="<style>.navbar{display:none}</style>";
 
@@ -218,10 +218,10 @@ ${lmTime}
   <title>$vars->{'title'}</title>
 ${preload}
 </head>
-<xmp theme=\"${theme}\" style=\"display:none;\">
+<textarea data-theme=\"${theme}\" style=\"display:none;\">
 ${body}
-</xmp>
-<script src=\"${scriptbase}/v/0.2/strapdown.js\"></script>
+</textarea>
+<script src=\"${scriptbase}/v/0.3/strapdown.js\"></script>
 </html>
 ";
 }
