@@ -62,7 +62,8 @@ Last-modified: ${lmTime}
        'scriptbase' => '//bits.efn.no',
        'theme' => undef,
        'title' => undef,
-);
+      );
+
 %can_override=(
        'debug' => 'b',
        'help' => 'b',
@@ -70,7 +71,8 @@ Last-modified: ${lmTime}
        'raw' => 'b',
        'theme' => 's',
        'title' => 's',
-);
+	      );
+
 %helpstr=(
        'caching' => 'Caching enabled. Default __on__.',
        'debug' => 'Show a list of debug variables. Default __off__.',
@@ -82,7 +84,7 @@ Last-modified: ${lmTime}
        'scriptbase' => 'Where all the scripts are located. Default `//bits.efn.no`. This will probably change in the future',
        'theme' => 'The CSS-styles to be appied to this document. Default __`noheader`__. Other examples are `amelia`,`bootstrap`,`bootstrap-responsive`,`cerulean`,`cyborg`,`journal`,`readable`,`simplex`,`slate`,`spacelab`,`spruce`,`superhero`,`united`',
        'title' => 'The HTML title of this document. Default __name of the file__',
-);
+	 );
 
 ($suffix)=$fName=~/\.([^.]+)$/;
 
