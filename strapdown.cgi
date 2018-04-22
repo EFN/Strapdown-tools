@@ -64,12 +64,12 @@ Last-modified: ${lmTime}
        'title' => undef,
 );
 %can_override=(
-       'debug' => 1,
-       'help' => 1,
-       'preload' => 1,
-       'raw' => 1,
-       'theme' => 1,
-       'title' => 1,
+       'debug' => 'b',
+       'help' => 'b',
+       'preload' => 'b',
+       'raw' => 'b',
+       'theme' => 's',
+       'title' => 's',
 );
 %helpstr=(
        'caching' => 'Caching enabled. Default __on__.',
@@ -103,7 +103,12 @@ if ($suffix eq "mdh" )
 %params;
 foreach (split('&', $ENV{'QUERY_STRING'})) {
   (my $key, my $value)=split('=',$_);
-  $params{$key}=($value)?"1":"0";
+  if ($can_override{$key} eq 'b') {
+    $params{$key}=($value)?"1":"0";
+  }
+  else {
+    $params{$key}=$value;
+  }
 }
 
 $QSTRING="";
