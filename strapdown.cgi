@@ -50,6 +50,8 @@ Last-modified: ${lmTime}
   }
 }
 
+#TODO: Add lang variable, perhaps some automation:
+#http://search.cpan.org/~ambs/Lingua-Identify-0.56/lib/Lingua/Identify.pm
 
 %vars=(
        'caching' => undef,
