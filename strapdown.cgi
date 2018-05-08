@@ -62,6 +62,7 @@ Last-modified: ${lmTime}
        'preload' => undef,
        'raw' => undef,
        'scriptbase' => '//bits.efn.no',
+       'shortcuticon' => undef,
        'theme' => undef,
        'title' => undef,
       );
@@ -203,10 +204,23 @@ sub createPage {
   my $scriptbase=$vars->{'scriptbase'};
   my $theme=$vars->{'theme'};
   my $preload="";
+  if (defined($vars->{'shortcuticon'})) {
+    if ($vars->{'shortcuticon'}=~/\.(\w\w\w)$/) {
+      if ($1 eq 'svg') { $shortcuticon_type="image/svg+xml"; }
+      elsif ($1 eq 'ico') { $shortcuticon_type="image/x-icon"; }
+      elsif ($1 eq 'gif') { $shortcuticon_type="image/gif"; }
+      elsif ($1 eq 'png') { $shortcuticon_type="image/png"; }
+
+      if ($shortcuticon_type) {
+	$shortcuticon='<link rel="icon" type="'.$shortcuticon_type.'" href="'.$vars->{'shortcuticon'}.'">';
+      }
+    }
+  }
   if ((! defined($vars->{'preload'})) || str2bool($vars->{'preload'})) {
     $preload="  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.3/strapdown.css\" as=\"style\">
   <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.3/themes/bootstrap-responsive.min.css\" as=\"style\">
   <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.3/themes/${theme}.min.css\" as=\"style\">
+   ${shortcuticon}
 ";
     #$preload.="<style>.navbar{display:none}</style>";
 
