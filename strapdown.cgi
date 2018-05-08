@@ -229,7 +229,7 @@ sub createPage {
     ($vars->{'title'})=$ENV{'PATH_INFO'}=~/([^\/]+)$/;
   }
   if (! $vars->{'theme'}) {
-    ($vars->{'theme'})='efn';
+    ($vars->{'theme'})='readable';
   }
 
   logg DEBUG, "Caching is defined as ".$vars->{'caching'};
