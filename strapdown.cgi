@@ -13,9 +13,29 @@
 # restart apache.
 #
 
+
+sub prefail {
+  my $modfailure=$_[0];
+  print "Status: 200 OK\n";
+  print "Content-type: text/plain\n";
+  print "\n";
+  print "Module '${modfailure}' does not exist, please install it first!\n";
+
+  exit(0);
+}
+
+
+@module = ("use File::stat;","use Date::Format","use Date::Parse qw(str2time)");
+for(@module){
+  eval;
+  if($@){
+    $_=~/\w+\W(\S+)/;
+    prefail("$1");
+  }
+};
+
 use File::stat;
-use Date::Format;
-use Date::Parse qw(str2time);
+
 
 sub trim {
   my $res=$_[0];
