@@ -140,25 +140,33 @@ if ($suffix eq "mdh" )
   $body=$line;
 }
 
-%params;
-foreach (split('&', $ENV{'QUERY_STRING'})) {
-  (my $key, my $value)=split('=',$_);
-  if ($can_override{$key} eq 'b') {
-    $params{$key}=($value)?"1":"0";
+sub normalizeQuery {
+  my $query=$_[0];
+  my $can_override=$_[1];
+
+  my %params;
+  foreach (split('&', $ENV{'QUERY_STRING'})) {
+    (my $key, my $value)=split('=',$_);
+    if ($can_override->{$key} eq 'b') {
+      $params{$key}=($value)?"1":"0";
+    }
+    else {
+      $params{$key}=$value;
+    }
   }
-  else {
-    $params{$key}=$value;
+
+  my $QSTRING="";
+  foreach (sort keys %params) {
+    if ($can_override->{$_}) {
+      $vars{$_}=$params{$_};
+      $QSTRING.="&" if ($QSTRING);
+      $QSTRING.=sprintf("%s=%s",$_,$params{$_});
+    }
   }
+  return $QSTRING;
 }
 
-$QSTRING="";
-foreach (sort keys %params) {
-  if ($can_override{$_}) {
-    $vars{$_}=$params{$_};
-    $QSTRING.="&" if ($QSTRING);
-    $QSTRING.=sprintf("%s=%s",$_,$params{$_});
-  }
-}
+$QSTRING=normalizeQuery($ENV{'QUERY_STRING'},\%can_override);
 
 if ($QSTRING ne $ENV{'QUERY_STRING'}) {
   #print "Status: 307 Temporary Redirect\n";
