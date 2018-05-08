@@ -270,12 +270,15 @@ ${lmTime}
 <head>
   <title>$vars->{'title'}</title>
 ${preload}
+<noscript>
+  <!-- <meta http-equiv=\"refresh\" content=\"0; url=?raw=1\"> -->
+</noscript>
 </head>
 <body>
 <noscript>
-  <style>html{display:none;}</style>
-  <meta http-equiv=\"refresh\" content=\"0.0;url=?raw=1\">
-</noscript><textarea data-theme=\"${theme}\" style=\"display:none;\">
+<p>This site uses javascript to render properly. In case you don't have javascript. We tried to redirect you to the non-javascript version, but seem to have failed. Please refer to the same page with \"<a href=\"?raw=1\">raw=1</a>\" appended</p>
+</noscript>
+<textarea data-theme=\"${theme}\" style=\"display:none;\">
 ${body}
 </textarea>
 <script src=\"${scriptbase}/v/0.3/strapdown.js\"></script>
