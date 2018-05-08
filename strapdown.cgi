@@ -111,6 +111,21 @@ Last-modified: ${lmTime}
 
 ($suffix)=$fName=~/\.([^.]+)$/;
 
+$hasSiteConf = 0;
+if ( -f "strapdown.conf") {
+  $hasSiteConf=1;
+  open(CONTENT,"<strapdown.conf");
+  while (($line=<CONTENT>) && (($key,$value)=$line=~/([^:]+):(.*)/) ) {
+    if (exists $vars{$key}) {
+      $vars{$key}=$value;
+    }
+    else {
+      error("# undefined key '$key' used");
+    }
+  }
+  close(CONTENT);
+}
+
 open(CONTENT,"<$lName");
 if ($suffix eq "mdh" )
 {
@@ -350,6 +365,7 @@ sub debug {
 		  {
 		   'whoami' => $whoami,
 		   'cwd' => trim(`pwd`),
+		   'hasSiteConf' => $hasSiteConf,
 		  });
 
   my %pass=(%vars,( 'title' => 'DEBUG', 'caching' => false, 'debug' => undef));
