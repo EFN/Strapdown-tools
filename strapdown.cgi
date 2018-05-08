@@ -271,10 +271,15 @@ ${lmTime}
   <title>$vars->{'title'}</title>
 ${preload}
 </head>
-<textarea data-theme=\"${theme}\" style=\"display:none;\">
+<body>
+<noscript>
+  <style>html{display:none;}</style>
+  <meta http-equiv=\"refresh\" content=\"0.0;url=?raw=1\">
+</noscript><textarea data-theme=\"${theme}\" style=\"display:none;\">
 ${body}
 </textarea>
 <script src=\"${scriptbase}/v/0.3/strapdown.js\"></script>
+</body>
 </html>
 ";
 }
