@@ -145,28 +145,32 @@ sub normalizeQuery {
   my $can_override=$_[1];
 
   my %params;
-  foreach (split('&', $ENV{'QUERY_STRING'})) {
+  foreach (split('&', $query)) {
     (my $key, my $value)=split('=',$_);
     if ($can_override->{$key} eq 'b') {
       $params{$key}=($value)?"1":"0";
+      $vars{$key}=$params{$key};
     }
-    else {
+    elsif ($can_override->{$key}) {
       $params{$key}=$value;
+      $vars{$key}=$params{$key};
     }
   }
-
-  my $QSTRING="";
-  foreach (sort keys %params) {
-    if ($can_override->{$_}) {
-      $vars{$_}=$params{$_};
-      $QSTRING.="&" if ($QSTRING);
-      $QSTRING.=sprintf("%s=%s",$_,$params{$_});
-    }
-  }
-  return $QSTRING;
+  return %params;
 }
 
-$QSTRING=normalizeQuery($ENV{'QUERY_STRING'},\%can_override);
+sub qstringFromParams {
+  my $para=$_[0];
+  my $nstring="";
+  my $vars;
+  foreach (sort keys %{$para}) {
+    $nstring.="&" if ($nstring);
+    $nstring.=sprintf("%s=%s",$_,$para->{$_});
+  }
+  return $nstring;
+}
+%params=normalizeQuery($ENV{'QUERY_STRING'},\%can_override);
+$QSTRING=qstringFromParams(\%params);
 
 if ($QSTRING ne $ENV{'QUERY_STRING'}) {
   #print "Status: 307 Temporary Redirect\n";
@@ -270,6 +274,10 @@ sub createPage {
   }
   logg INFO, "PRELOAD: ".$preload;
 
+  %redirTarget=(%params);
+  $redirTarget{'raw'}='1';
+  $redirectTarget='?'.qstringFromParams(\%redirTarget);
+
   return "Content-type: text/html; charset=utf-8
 ${lmTime}
 
@@ -284,7 +292,7 @@ ${preload}
 </head>
 <body>
 <noscript>
-<p>This site uses javascript to render properly. In case you don't have javascript. We tried to redirect you to the non-javascript version, but seem to have failed. Please refer to the same page with \"<a href=\"?raw=1\">raw=1</a>\" appended</p>
+<p>This site uses javascript to render properly. In case you don't have javascript. We tried to redirect you to the non-javascript version, but seem to have failed. Please refer to the same page with \"<a href=\"${redirectTarget}\">raw=1</a>\" appended</p>
 </noscript>
 <textarea data-theme=\"${theme}\" style=\"display:none;\">
 ${body}
