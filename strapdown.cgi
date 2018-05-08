@@ -287,7 +287,7 @@ ${lmTime}
   <title>$vars->{'title'}</title>
 ${preload}
 <noscript>
-  <!-- <meta http-equiv=\"refresh\" content=\"0; url=?raw=1\"> -->
+  <meta http-equiv=\"refresh\" content=\"0; url=${redirectTarget}\">
 </noscript>
 </head>
 <body>
