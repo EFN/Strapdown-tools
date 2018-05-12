@@ -309,6 +309,10 @@ sub error {
   exit(0);
 }
 
+sub escape {
+  return $_[0]=~s/\*/\\\*/gr;
+}
+
 sub dumpDict {
   my $headers=shift;
   my $dict=shift;
@@ -351,9 +355,9 @@ sub dumpDict {
   }
   $text.="|\n";
   foreach (sort keys %{$dict}) {
-    $text.=sprintf("|%-${km}s|%-${vm}s",$_, $dict->{$_});
+    $text.=sprintf("|%-${km}s|%-${vm}s",escape($_), escape($dict->{$_}));
     if ($dict2) {
-      $text.=sprintf("|%-${vm2}s",$dict2->{$_});
+      $text.=sprintf("|%-${vm2}s",escape($dict2->{$_}));
     }
     $text.="|\n";
   }
