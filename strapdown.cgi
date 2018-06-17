@@ -255,20 +255,48 @@ sub createPage {
       }
     }
   }
+  @styles=(
+	   "${scriptbase}/v/0.3/strapdown.css",
+	   "${scriptbase}/v/0.3/themes/bootstrap-responsive.min.css",
+	   "${scriptbase}/v/0.3/themes/${theme}.min.css"
+	  );
   if ((! defined($vars->{'preload'})) || str2bool($vars->{'preload'})) {
-    $preload="  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.3/strapdown.css\" as=\"style\">
-  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.3/themes/bootstrap-responsive.min.css\" as=\"style\">
-  <link rel=\"stylesheet\" href=\"${scriptbase}/v/0.3/themes/${theme}.min.css\" as=\"style\">
-   ${shortcuticon}
-";
+    foreach (@styles) {
+      $linklist.="\n" if ($linklist);
+      $linklist.='  <link rel="stylesheet" href="'.$_.'" as="style">';
+    }
+    #$preload.="${linklist}";
     #$preload.="<style>.navbar{display:none}</style>";
-
   }
+  if ( $ENV{'H2_PUSH'}) {
+    @scripts=(
+	      "${scriptbase}/v/0.3/strapdown.js"
+	     );
+    $linklist='';
+    foreach (@styles) {
+      $linklist.=', ' if ($linklist);
+      $linklist.='<'.$_.'>;rel=preload;as=style;crossorigin';
+    }
+    foreach (@scripts) {
+      $linklist.=', ' if ($linklist);
+      $linklist.='<'.$_.'>;rel=preload;as=script;crossorigin';
+    }
+    print "link: ${linklist}\n";
+  }
+  $preload.="
+  ${shortcuticon}
+";
   logg INFO, "PRELOAD: ".$preload;
 
   %redirTarget=(%params);
   $redirTarget{'raw'}='1';
   $redirectTarget='?'.qstringFromParams(\%redirTarget);
+
+  if (! ($vars->{'raw'}=='0')) {
+    $metaredir="<noscript>
+  <meta http-equiv=\"refresh\" content=\"0; url=${redirectTarget}\">
+</noscript>";
+  }
 
   return "Content-type: text/html; charset=utf-8
 ${lmTime}
@@ -278,9 +306,7 @@ ${lmTime}
 <head>
   <title>$vars->{'title'}</title>
 ${preload}
-<noscript>
-  <meta http-equiv=\"refresh\" content=\"0; url=${redirectTarget}\">
-</noscript>
+${metaredir}
 </head>
 <body>
 <noscript>
