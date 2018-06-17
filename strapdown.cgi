@@ -88,7 +88,7 @@ our %Helpstr=(
 sub logg {
   if ($Vars{'logfile'}) {
     if ($_[0]>=$logLevel) {
-      say LOG dbgLevel2String($_[0]).": ".$_[1];
+      say LOGFILE dbgLevel2String($_[0]).": ".$_[1];
     }
   }
 }
@@ -141,7 +141,7 @@ if ($Vars{'loglevel'}) {
 }
 
 if ($Vars{'logfile'}) {
-  open(LOG, '>>', $Vars{'logfile'}) || die;
+  open(LOGFILE, '>>', $Vars{'logfile'}) || die;
   logg INFO, "Start logging";
   logg INFO, "Loglevel is: ".dbgLevel2String($logLevel);
 }
@@ -162,7 +162,7 @@ sub createRaw {
   logg DEBUG, "Caching is defined as ".$vars->{'caching'};
   my $cache=(! defined($vars->{'caching'})) || str2bool($vars->{'caching'});
   logg DEBUG, "Caching: ".$cache;
-  $lmTime=undef if (! $cache);
+  $lmTime='' if (! $cache);
 
   return "Content-type: text/plain
 ${lmTime}
@@ -174,7 +174,7 @@ ${body}
 sub createPage {
   my $body=shift;
   my $vars=shift;
-  logg DEBUG, "raw value is: '". $vars->{'raw'}."'";
+  logg DEBUG, "raw value is: '". setAndTrue($vars->{'raw'})."'";
   if (str2bool($vars->{'raw'})) {
     return createRaw($body, $vars);
   }
@@ -189,7 +189,7 @@ sub createPage {
   logg DEBUG, "Caching is defined as ".$vars->{'caching'};
   my $cache=(! defined($vars->{'caching'})) || str2bool($vars->{'caching'});
   logg DEBUG, "Caching: ".$cache;
-  $lmTime=undef if (! $cache);
+  $lmTime='' if (! $cache);
   my $scriptbase=$vars->{'scriptbase'};
   my $theme=$vars->{'theme'};
   my $preload="";
@@ -251,7 +251,7 @@ sub createPage {
   my $redirectTarget='?'.qstringFromParams(\%redirTarget);
 
   my $metaredir='';
-  if (! ($vars->{'raw'}=='0')) {
+  if (setAndTrue($vars->{'raw'})) {
     $metaredir="<noscript>
   <meta http-equiv=\"refresh\" content=\"0; url=${redirectTarget}\">
 </noscript>";
@@ -287,6 +287,7 @@ sub error {
 }
 
 sub escape {
+  return $_[0] if (!defined $_[0]);
   return $_[0]=~s/\*/\\\*/gr;
 }
 
@@ -301,7 +302,7 @@ sub dumpDict {
   foreach (keys %{$dict}) {
     my $l=length($_);
     $km=$l if ($l>$km);
-    $l=length($dict->{$_});
+    $l=(defined $dict->{$_})?length($dict->{$_}):0;
     $vm=$l if ($l>$vm);
   }
   if ($dict2) {
@@ -332,9 +333,13 @@ sub dumpDict {
   }
   $text.="|\n";
   foreach (sort keys %{$dict}) {
-    $text.=sprintf("|%-${km}s|%-${vm}s",escape($_), escape($dict->{$_}));
+    my $val1=escape($dict->{$_});
+    $val1='' if (! defined $val1);
+    $text.=sprintf("|%-${km}s|%-${vm}s",escape($_), $val1);
     if ($dict2) {
-      $text.=sprintf("|%-${vm2}s",escape($dict2->{$_}));
+      my $val2=escape($dict2->{$_});
+      $val2='' if (! defined $val2);
+      $text.=sprintf("|%-${vm2}s", $val2);
     }
     $text.="|\n";
   }
@@ -344,7 +349,6 @@ sub dumpDict {
 
 sub str2bool {
   my $value=shift;
-  logg DEBUG, "str2bool: '${value}'";
   return 0 if (!$value);
   $value=lc $value;
   return 0 if ($value eq "false");
@@ -461,4 +465,9 @@ sub qstringFromParams {
     $nstring.=sprintf("%s=%s",$_,$para->{$_});
   }
   return $nstring;
+}
+
+sub setAndTrue {
+  my ($value) = @_;
+  return (defined $value and $value);
 }
