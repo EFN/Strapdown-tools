@@ -13,56 +13,30 @@
 # restart apache.
 #
 
+our $logLevel;
 
-sub prefail {
-  my $modfailure=$_[0];
-  print "Status: 200 OK\n";
-  print "Content-type: text/plain\n";
-  print "\n";
-  print "Module '${modfailure}' does not exist, please install it first!\n";
-
-  exit(0);
-}
-
-
-@module = ("use File::stat;","use Date::Format","use Date::Parse qw(str2time)");
-for(@module){
+my @module = ("use File::stat;","use Date::Format","use Date::Parse qw(str2time)","use YAML::XS;", "use YAML::XS 'LoadFile';");
+for (@module) {
   eval;
-  if($@){
+  if ($@) {
     $_=~/\w+\W(\S+)/;
     prefail("$1");
   }
-};
+}
+;
 
 use File::stat;
-use YAML::XS;
-use YAML::XS 'LoadFile';
 
+my $fName=$ENV{'PATH_INFO'};
+my $lName=$ENV{'PATH_TRANSLATED'};
 
-sub trim {
-  my $res=$_[0];
-  $res=~s/^\s+|\s+$//g;
-  return $res;
-}
+my $mtime = stat($lName)->mtime;
 
-sub logg {
-  if ($vars{'logfile'}) {
-    if ($_[0]>=$logLevel) {
-      say LOG dbgLevel2String($_[0]).": ".$_[1];
-    }
-  }
-}
-
-$fName=$ENV{'PATH_INFO'};
-$lName=$ENV{'PATH_TRANSLATED'};
-
-$mtime = stat($lName)->mtime;
-
-$lmTime=time2str("Last-Modified: %a, %d %b %Y %H:%M:%S GMT", $mtime, "GMT");
+my $lmTime=time2str("Last-Modified: %a, %d %b %Y %H:%M:%S GMT", $mtime, "GMT");
 
 #Short circuit if we have an IF_MODIFIED_SINCE
 if ( $ENV{'HTTP_IF_MODIFIED_SINCE'} ) {
-  $if_m = str2time( $ENV{'HTTP_IF_MODIFIED_SINCE'} );
+  my $if_m = str2time( $ENV{'HTTP_IF_MODIFIED_SINCE'} );
   if ($mtime <= $if_m) {
     print "Status: 304 Not Modified
 Last-modified: ${lmTime}
@@ -75,7 +49,7 @@ Last-modified: ${lmTime}
 #TODO: Add lang variable, perhaps some automation:
 #http://search.cpan.org/~ambs/Lingua-Identify-0.56/lib/Lingua/Identify.pm
 
-%vars=(
+our %Vars=(
        'caching' => undef,
        'debug' => undef,
        'help' => undef,
@@ -89,80 +63,58 @@ Last-modified: ${lmTime}
        'title' => undef,
       );
 
-%can_override=(
-       'debug' => 'b',
-       'help' => 'b',
-       'preload' => 'b',
-       'raw' => 'b',
-       'theme' => 's',
-       'title' => 's',
+our %Can_Override=(
+	       'debug' => 'b',
+	       'help' => 'b',
+	       'preload' => 'b',
+	       'raw' => 'b',
+	       'theme' => 's',
+	       'title' => 's',
 	      );
 
-%helpstr=(
-       'caching' => 'Caching enabled. Default __on__.',
-       'debug' => 'Show a list of debug variables. Default __off__.',
-       'help' => 'Show this help text. Default __off__.',
-       'logfile' => 'Log destination file. Default *None*.',
-       'logfile' => 'Log level. Available values are `DEBUG` and `INFO`. Default `INFO`.',
-       'preload' => 'Uses static knowledge of `strapdown.js` to speed up page loading. Default __on__',
-       'raw' => 'Display the raw *Markdown*. Default __off__.',
-       'scriptbase' => 'Where all the scripts are located. Default `//bits.efn.no`. This will probably change in the future',
-       'theme' => 'The CSS-styles to be appied to this document. Default __`noheader`__. Other examples are `amelia`,`bootstrap`,`bootstrap-responsive`,`cerulean`,`cyborg`,`journal`,`readable`,`simplex`,`slate`,`spacelab`,`spruce`,`superhero`,`united`',
-       'title' => 'The HTML title of this document. Default __name of the file__',
+our %Helpstr=(
+	  'caching' => 'Caching enabled. Default __on__.',
+	  'debug' => 'Show a list of debug variables. Default __off__.',
+	  'help' => 'Show this help text. Default __off__.',
+	  'logfile' => 'Log destination file. Default *None*.',
+	  'logfile' => 'Log level. Available values are `DEBUG` and `INFO`. Default `INFO`.',
+	  'preload' => 'Uses static knowledge of `strapdown.js` to speed up page loading. Default __on__',
+	  'raw' => 'Display the raw *Markdown*. Default __off__.',
+	  'scriptbase' => 'Where all the scripts are located. Default `//bits.efn.no`. This will probably change in the future',
+	  'theme' => 'The CSS-styles to be appied to this document. Default __`noheader`__. Other examples are `amelia`,`bootstrap`,`bootstrap-responsive`,`cerulean`,`cyborg`,`journal`,`readable`,`simplex`,`slate`,`spacelab`,`spruce`,`superhero`,`united`',
+	  'title' => 'The HTML title of this document. Default __name of the file__',
 	 );
 
-($suffix)=$fName=~/\.([^.]+)$/;
+sub logg {
+  if ($Vars{'logfile'}) {
+    if ($_[0]>=$logLevel) {
+      say LOG dbgLevel2String($_[0]).": ".$_[1];
+    }
+  }
+}
 
-$hasSiteConf = 0;
+my ($suffix)=$fName=~/\.([^.]+)$/;
+
+our $hasSiteConf = 0;
 if ( -f "strapdown.conf") {
   $hasSiteConf=1;
   my $settings = LoadFile("strapdown.conf");
-  transferValidVars(\%vars, $settings);
+  transferValidVars(\%Vars, $settings);
 }
 
 open(CONTENT,"<$lName");
-if ($suffix eq "mdh" )
-  {
-    my $headers='';
-    while ($line=<CONTENT>) {
-      $headers.=$line;
-      last if ($line eq "...\n" );
-    }
-    my $settings = Load($headers);
-    transferValidVars(\%vars, $settings);
-}
-
-sub normalizeQuery {
-  my $query=$_[0];
-  my $can_override=$_[1];
-
-  my %params;
-  foreach (split('&', $query)) {
-    (my $key, my $value)=split('=',$_);
-    if ($can_override->{$key} eq 'b') {
-      $params{$key}=($value)?"1":"0";
-      $vars{$key}=$params{$key};
-    }
-    elsif ($can_override->{$key}) {
-      $params{$key}=$value;
-      $vars{$key}=$params{$key};
-    }
+if ($suffix eq "mdh" ) {
+  my $headers='';
+  while (my $line=<CONTENT>) {
+    $headers.=$line;
+    last if ($line eq "...\n" );
   }
-  return %params;
+  my $settings = Load($headers);
+  transferValidVars(\%Vars, $settings);
 }
 
-sub qstringFromParams {
-  my $para=$_[0];
-  my $nstring="";
-  my $vars;
-  foreach (sort keys %{$para}) {
-    $nstring.="&" if ($nstring);
-    $nstring.=sprintf("%s=%s",$_,$para->{$_});
-  }
-  return $nstring;
-}
-%params=normalizeQuery($ENV{'QUERY_STRING'},\%can_override);
-$QSTRING=qstringFromParams(\%params);
+my %params=normalizeQuery($ENV{'QUERY_STRING'},\%Can_Override);
+my $QSTRING=qstringFromParams(\%params);
 
 if ($QSTRING ne $ENV{'QUERY_STRING'}) {
   #print "Status: 307 Temporary Redirect\n";
@@ -174,36 +126,34 @@ if ($QSTRING ne $ENV{'QUERY_STRING'}) {
   print "Normalizing URL\n";
   exit(0);
 }
-
 use constant {
- DEBUG => 1,
- INFO => 2,
-};
+	      DEBUG => 1,
+	      INFO => 2,
+	     };
 
-if ($vars{'loglevel'}) {
-  $logLevel=string2DbgLevel($vars{'loglevel'});
+if ($Vars{'loglevel'}) {
+  $logLevel=string2DbgLevel($Vars{'loglevel'});
   if (!$logLevel) {
-    error("# invalid value for 'loglevel':".$vars{'loglevel'});
+    error("# invalid value for 'loglevel':".$Vars{'loglevel'});
   }
-}
-else {
+} else {
   $logLevel=INFO;
 }
 
-if ($vars{'logfile'}) {
-  open(LOG, '>>', $vars{'logfile'}) || die;
+if ($Vars{'logfile'}) {
+  open(LOG, '>>', $Vars{'logfile'}) || die;
   logg INFO, "Start logging";
   logg INFO, "Loglevel is: ".dbgLevel2String($logLevel);
 }
 
 local $/;
-$body.=<CONTENT>;
+my $body.=<CONTENT>;
 close(CONTENT);
 
-debug() if (str2bool($vars{'debug'}));
-help() if (str2bool($vars{'help'}));
+debug() if (str2bool($Vars{'debug'}));
+help() if (str2bool($Vars{'help'}));
   
-print createPage($body,\%vars);
+print createPage($body,\%Vars);
 
 sub createRaw {
   my $body=shift;
@@ -245,10 +195,15 @@ sub createPage {
   my $preload="";
   if (defined($vars->{'shortcuticon'})) {
     if ($vars->{'shortcuticon'}=~/\.(\w\w\w)$/) {
-      if ($1 eq 'svg') { $shortcuticon_type="image/svg+xml"; }
-      elsif ($1 eq 'ico') { $shortcuticon_type="image/x-icon"; }
-      elsif ($1 eq 'gif') { $shortcuticon_type="image/gif"; }
-      elsif ($1 eq 'png') { $shortcuticon_type="image/png"; }
+      if ($1 eq 'svg') {
+	$shortcuticon_type="image/svg+xml";
+      } elsif ($1 eq 'ico') {
+	$shortcuticon_type="image/x-icon";
+      } elsif ($1 eq 'gif') {
+	$shortcuticon_type="image/gif";
+      } elsif ($1 eq 'png') {
+	$shortcuticon_type="image/png";
+      }
 
       if ($shortcuticon_type) {
 	$shortcuticon='<link rel="icon" type="'.$shortcuticon_type.'" href="'.$vars->{'shortcuticon'}.'">';
@@ -288,10 +243,11 @@ sub createPage {
 ";
   logg INFO, "PRELOAD: ".$preload;
 
-  %redirTarget=(%params);
+  my %redirTarget=(%params);
   $redirTarget{'raw'}='1';
-  $redirectTarget='?'.qstringFromParams(\%redirTarget);
+  my $redirectTarget='?'.qstringFromParams(\%redirTarget);
 
+  my $metaredir;
   if (! ($vars->{'raw'}=='0')) {
     $metaredir="<noscript>
   <meta http-equiv=\"refresh\" content=\"0; url=${redirectTarget}\">
@@ -323,7 +279,7 @@ ${body}
 
 sub error {
   print "Status: 500 Internal server error\n";
-  print createPage($_[0], {'scriptbase' => $vars{'scriptbase'}});
+  print createPage($_[0], {'scriptbase' => $Vars{'scriptbase'}});
   exit(0);
 }
 
@@ -336,9 +292,9 @@ sub dumpDict {
   my $dict=shift;
   my $dict2=shift;
 
-  $km=length($headers->[0]);
-  $vm=length($headers->[1]);
-  $vm2=length($headers->[2]);
+  my $km=length($headers->[0]);
+  my $vm=length($headers->[1]);
+  my $vm2=length($headers->[2]);
   foreach (keys %{$dict}) {
     my $l=length($_);
     $km=$l if ($l>$km);
@@ -358,16 +314,16 @@ sub dumpDict {
   }
   $text.=sprintf("|\n");
   $text.="|";
-  for ($i=0;$i<$km;$i++) {
+  for (my $i=0;$i<$km;$i++) {
     $text.="-";
   }
   $text.="|";
-  for ($i=0;$i<$vm;$i++) {
+  for (my $i=0;$i<$vm;$i++) {
     $text.="-";
   }
   if ($dict2) {
     $text.="|";
-    for ($i=0;$i<$vm2;$i++) {
+    for (my $i=0;$i<$vm2;$i++) {
       $text.="-";
     }
   }
@@ -399,13 +355,13 @@ sub str2bool {
 sub debug {
   my $text="#DEBUG\n\n";
   $text.="##Page variables\n\n";
-  $text.=dumpDict(['Variable', 'Value', 'Can override'],\%vars, \%can_override);
+  $text.=dumpDict(['Variable', 'Value', 'Can override'],\%Vars, \%Can_Override);
   $text.="\n";
   $text.="##Server variables\n\n";
   $text.=dumpDict(['Variable', 'Value'],\%ENV);
   $text.="\n";
   $text.="##Other stuff\n\n";
-  $whoami=`whoami`;
+  my $whoami=`whoami`;
   chop($whoami);
   $text.=dumpDict(['Variable', 'Value'],
 		  {
@@ -414,7 +370,7 @@ sub debug {
 		   'hasSiteConf' => $hasSiteConf,
 		  });
 
-  my %pass=(%vars,( 'title' => 'DEBUG', 'caching' => false, 'debug' => undef));
+  my %pass=(%Vars,( 'title' => 'DEBUG', 'caching' => false, 'debug' => undef));
   print createPage($text, \%pass);
   exit(0);
 }
@@ -422,41 +378,84 @@ sub debug {
 sub help {
   my $text="#HELP\n";
   $text.="##Page variables\n";
-  $text.=dumpDict(['Variable', 'Explanation'],\%helpstr);
-  my %pass=(%vars,( 'title' => 'HELP', 'caching' => false));
+  $text.=dumpDict(['Variable', 'Explanation'],\%Helpstr);
+  my %pass=(%Vars,( 'title' => 'HELP', 'caching' => false));
   print createPage($text, \%pass);
   exit(0);
 }
 
 sub dbgLevel2String {
- if ($_[0] == DEBUG) {
-   return "DEBUG";
- }
- elsif ($_[0] == INFO) {
-   return "INFO";
- }
+  if ($_[0] == DEBUG) {
+    return "DEBUG";
+  } elsif ($_[0] == INFO) {
+    return "INFO";
+  }
 }
 
 sub string2DbgLevel {
- my $str=uc $_[0];
- if ($str eq 'DEBUG') {
-   return DEBUG;
- }
- elsif ($str eq 'INFO') {
-   return INFO;
- }
- return undef;
+  my $str=uc $_[0];
+  if ($str eq 'DEBUG') {
+    return DEBUG;
+  } elsif ($str eq 'INFO') {
+    return INFO;
+  }
+  return undef;
 }
 
 sub transferValidVars {
   my ($dest, $source, $check) = @_;
   $check = $dest if (!$check);
-  foreach $key (keys %{$source}) {
+  foreach my $key (keys %{$source}) {
     if (exists $check->{$key}) {
       $dest->{$key}=$source->{$key};
-    }
-    else {
+    } else {
       error("# undefined key '$key' used");
     }
   }
+}
+
+sub prefail {
+  my $modfailure=$_[0];
+  print "Status: 200 OK\n";
+  print "Content-type: text/plain\n";
+  print "\n";
+  print "Module '${modfailure}' does not exist, please install it first!\n";
+
+  exit(0);
+}
+
+
+sub trim {
+  my $res=$_[0];
+  $res=~s/^\s+|\s+$//g;
+  return $res;
+}
+
+sub normalizeQuery {
+  my $query=$_[0];
+  my $can_override=$_[1];
+
+  my %params;
+  foreach (split('&', $query)) {
+    (my $key, my $value)=split('=',$_);
+    if ($can_override->{$key} eq 'b') {
+      $params{$key}=($value)?"1":"0";
+      $Vars{$key}=$params{$key};
+    } elsif ($can_override->{$key}) {
+      $params{$key}=$value;
+      $Vars{$key}=$params{$key};
+    }
+  }
+  return %params;
+}
+
+sub qstringFromParams {
+  my $para=$_[0];
+  my $nstring="";
+  my $vars;
+  foreach (sort keys %{$para}) {
+    $nstring.="&" if ($nstring);
+    $nstring.=sprintf("%s=%s",$_,$para->{$_});
+  }
+  return $nstring;
 }
