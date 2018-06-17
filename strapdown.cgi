@@ -32,7 +32,7 @@ my $lName=$ENV{'PATH_TRANSLATED'};
 
 my $mtime = stat($lName)->mtime;
 
-my $lmTime=time2str("Last-Modified: %a, %d %b %Y %H:%M:%S GMT", $mtime, "GMT");
+our $lmTime=time2str("Last-Modified: %a, %d %b %Y %H:%M:%S GMT", $mtime, "GMT");
 
 #Short circuit if we have an IF_MODIFIED_SINCE
 if ( $ENV{'HTTP_IF_MODIFIED_SINCE'} ) {
@@ -159,7 +159,7 @@ sub createRaw {
   my $body=shift;
   my $vars=shift;
 
-  log DEBUG, "Caching is defined as ".$vars->{'caching'};
+  logg DEBUG, "Caching is defined as ".$vars->{'caching'};
   my $cache=(! defined($vars->{'caching'})) || str2bool($vars->{'caching'});
   logg DEBUG, "Caching: ".$cache;
   $lmTime=undef if (! $cache);
@@ -193,6 +193,8 @@ sub createPage {
   my $scriptbase=$vars->{'scriptbase'};
   my $theme=$vars->{'theme'};
   my $preload="";
+  my $shortcuticon;
+  my $shortcuticon_type;
   if (defined($vars->{'shortcuticon'})) {
     if ($vars->{'shortcuticon'}=~/\.(\w\w\w)$/) {
       if ($1 eq 'svg') {
@@ -210,11 +212,12 @@ sub createPage {
       }
     }
   }
-  @styles=(
+  my @styles=(
 	   "${scriptbase}/v/0.3/strapdown.css",
 	   "${scriptbase}/v/0.3/themes/bootstrap-responsive.min.css",
 	   "${scriptbase}/v/0.3/themes/${theme}.min.css"
 	  );
+  my $linklist;
   if ((! defined($vars->{'preload'})) || str2bool($vars->{'preload'})) {
     foreach (@styles) {
       $linklist.="\n" if ($linklist);
@@ -224,7 +227,7 @@ sub createPage {
     #$preload.="<style>.navbar{display:none}</style>";
   }
   if ( $ENV{'H2_PUSH'}) {
-    @scripts=(
+    my @scripts=(
 	      "${scriptbase}/v/0.3/strapdown.js"
 	     );
     $linklist='';
@@ -247,7 +250,7 @@ sub createPage {
   $redirTarget{'raw'}='1';
   my $redirectTarget='?'.qstringFromParams(\%redirTarget);
 
-  my $metaredir;
+  my $metaredir='';
   if (! ($vars->{'raw'}=='0')) {
     $metaredir="<noscript>
   <meta http-equiv=\"refresh\" content=\"0; url=${redirectTarget}\">
@@ -302,7 +305,7 @@ sub dumpDict {
     $vm=$l if ($l>$vm);
   }
   if ($dict2) {
-    foreach (keys %{$dict}) {
+    foreach (keys %{$dict2}) {
       my $l=length($_);
       $l=length($dict2->{$_});
       $vm2=$l if ($l>$vm);
@@ -370,7 +373,7 @@ sub debug {
 		   'hasSiteConf' => $hasSiteConf,
 		  });
 
-  my %pass=(%Vars,( 'title' => 'DEBUG', 'caching' => false, 'debug' => undef));
+  my %pass=(%Vars,( 'title' => 'DEBUG', 'caching' => 0, 'debug' => undef));
   print createPage($text, \%pass);
   exit(0);
 }
@@ -379,7 +382,7 @@ sub help {
   my $text="#HELP\n";
   $text.="##Page variables\n";
   $text.=dumpDict(['Variable', 'Explanation'],\%Helpstr);
-  my %pass=(%Vars,( 'title' => 'HELP', 'caching' => false));
+  my %pass=(%Vars,( 'title' => 'HELP', 'caching' => 0));
   print createPage($text, \%pass);
   exit(0);
 }
