@@ -35,6 +35,8 @@ for(@module){
 };
 
 use File::stat;
+use YAML::XS;
+use YAML::XS 'LoadFile';
 
 
 sub trim {
@@ -114,30 +116,20 @@ Last-modified: ${lmTime}
 $hasSiteConf = 0;
 if ( -f "strapdown.conf") {
   $hasSiteConf=1;
-  open(CONTENT,"<strapdown.conf");
-  while (($line=<CONTENT>) && (($key,$value)=$line=~/([^:]+):(.*)/) ) {
-    if (exists $vars{$key}) {
-      $vars{$key}=$value;
-    }
-    else {
-      error("# undefined key '$key' used");
-    }
-  }
-  close(CONTENT);
+  my $settings = LoadFile("strapdown.conf");
+  transferValidVars(\%vars, $settings);
 }
 
 open(CONTENT,"<$lName");
 if ($suffix eq "mdh" )
-{
-  while (($line=<CONTENT>) && (($key,$value)=$line=~/([^:]+):(.*)/) ) {
-    if (exists $vars{$key}) {
-      $vars{$key}=$value;
+  {
+    my $headers='';
+    while ($line=<CONTENT>) {
+      $headers.=$line;
+      last if ($line eq "...\n" );
     }
-    else {
-      error("# undefined key '$key' used");
-    }
-  }
-  $body=$line;
+    my $settings = Load($headers);
+    transferValidVars(\%vars, $settings);
 }
 
 sub normalizeQuery {
@@ -428,4 +420,17 @@ sub string2DbgLevel {
    return INFO;
  }
  return undef;
+}
+
+sub transferValidVars {
+  my ($dest, $source, $check) = @_;
+  $check = $dest if (!$check);
+  foreach $key (keys %{$source}) {
+    if (exists $check->{$key}) {
+      $dest->{$key}=$source->{$key};
+    }
+    else {
+      error("# undefined key '$key' used");
+    }
+  }
 }
