@@ -49,7 +49,7 @@ Last-modified: ${lmTime}
 #TODO: Add lang variable, perhaps some automation:
 #http://search.cpan.org/~ambs/Lingua-Identify-0.56/lib/Lingua/Identify.pm
 
-our %Vars=(
+our %PageVars=(
        'caching' => undef,
        'debug' => undef,
        'help' => undef,
@@ -63,7 +63,7 @@ our %Vars=(
        'title' => undef,
       );
 
-our %Can_Override=(
+our %CanOverride=(
 	       'debug' => 'b',
 	       'help' => 'b',
 	       'preload' => 'b',
@@ -86,7 +86,7 @@ our %Helpstr=(
 	 );
 
 sub logg {
-  if ($Vars{'logfile'}) {
+  if ($PageVars{'logfile'}) {
     if ($_[0]>=$logLevel) {
       say LOGFILE dbgLevel2String($_[0]).": ".$_[1];
     }
@@ -99,7 +99,7 @@ our $hasSiteConf = 0;
 if ( -f "strapdown.conf") {
   $hasSiteConf=1;
   my $settings = LoadFile("strapdown.conf");
-  transferValidVars(\%Vars, $settings);
+  transferValidVars(\%PageVars, $settings);
 }
 
 open(CONTENT,"<$lName");
@@ -110,10 +110,10 @@ if ($suffix eq "mdh" ) {
     last if ($line eq "...\n" );
   }
   my $settings = Load($headers);
-  transferValidVars(\%Vars, $settings);
+  transferValidVars(\%PageVars, $settings);
 }
 
-my %params=normalizeQuery($ENV{'QUERY_STRING'},\%Can_Override);
+my %params=normalizeQuery($ENV{'QUERY_STRING'},\%CanOverride);
 my $QSTRING=qstringFromParams(\%params);
 
 if ($QSTRING ne $ENV{'QUERY_STRING'}) {
@@ -131,17 +131,17 @@ use constant {
 	      INFO => 2,
 	     };
 
-if ($Vars{'loglevel'}) {
-  $logLevel=string2DbgLevel($Vars{'loglevel'});
+if ($PageVars{'loglevel'}) {
+  $logLevel=string2DbgLevel($PageVars{'loglevel'});
   if (!$logLevel) {
-    error("# invalid value for 'loglevel':".$Vars{'loglevel'});
+    error("# invalid value for 'loglevel':".$PageVars{'loglevel'});
   }
 } else {
   $logLevel=INFO;
 }
 
-if ($Vars{'logfile'}) {
-  open(LOGFILE, '>>', $Vars{'logfile'}) || die;
+if ($PageVars{'logfile'}) {
+  open(LOGFILE, '>>', $PageVars{'logfile'}) || die;
   logg INFO, "Start logging";
   logg INFO, "Loglevel is: ".dbgLevel2String($logLevel);
 }
@@ -150,10 +150,10 @@ local $/;
 my $body.=<CONTENT>;
 close(CONTENT);
 
-debug() if (str2bool($Vars{'debug'}));
-help() if (str2bool($Vars{'help'}));
+debug() if (str2bool($PageVars{'debug'}));
+help() if (str2bool($PageVars{'help'}));
   
-print createPage($body,\%Vars);
+print createPage($body,\%PageVars);
 
 sub createRaw {
   my $body=shift;
@@ -282,7 +282,7 @@ ${body}
 
 sub error {
   print "Status: 500 Internal server error\n";
-  print createPage($_[0], {'scriptbase' => $Vars{'scriptbase'}});
+  print createPage($_[0], {'scriptbase' => $PageVars{'scriptbase'}});
   exit(0);
 }
 
@@ -362,7 +362,7 @@ sub str2bool {
 sub debug {
   my $text="#DEBUG\n\n";
   $text.="##Page variables\n\n";
-  $text.=dumpDict(['Variable', 'Value', 'Can override'],\%Vars, \%Can_Override);
+  $text.=dumpDict(['Variable', 'Value', 'Can override'],\%PageVars, \%CanOverride);
   $text.="\n";
   $text.="##Server variables\n\n";
   $text.=dumpDict(['Variable', 'Value'],\%ENV);
@@ -377,7 +377,7 @@ sub debug {
 		   'hasSiteConf' => $hasSiteConf,
 		  });
 
-  my %pass=(%Vars,( 'title' => 'DEBUG', 'caching' => 0, 'debug' => undef));
+  my %pass=(%PageVars,( 'title' => 'DEBUG', 'caching' => 0, 'debug' => undef));
   print createPage($text, \%pass);
   exit(0);
 }
@@ -386,7 +386,7 @@ sub help {
   my $text="#HELP\n";
   $text.="##Page variables\n";
   $text.=dumpDict(['Variable', 'Explanation'],\%Helpstr);
-  my %pass=(%Vars,( 'title' => 'HELP', 'caching' => 0));
+  my %pass=(%PageVars,( 'title' => 'HELP', 'caching' => 0));
   print createPage($text, \%pass);
   exit(0);
 }
@@ -447,10 +447,10 @@ sub normalizeQuery {
     (my $key, my $value)=split('=',$_);
     if ($can_override->{$key} eq 'b') {
       $params{$key}=($value)?"1":"0";
-      $Vars{$key}=$params{$key};
+      $PageVars{$key}=$params{$key};
     } elsif ($can_override->{$key}) {
       $params{$key}=$value;
-      $Vars{$key}=$params{$key};
+      $PageVars{$key}=$params{$key};
     }
   }
   return %params;
