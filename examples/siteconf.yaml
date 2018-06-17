@@ -1,0 +1,19 @@
+PageVars:
+    caching: Yes
+    debug: Off
+    help: No
+    logfile: ~
+    loglevel: ~
+    preload: True
+    raw: False
+    scriptbase: //bits.efn.no
+    shortcuticon: ~
+    theme: ~
+    title: ~
+CanOverride:
+    debug: b
+    help: b
+    preload: b
+    raw: b
+    theme: s
+    title: s
