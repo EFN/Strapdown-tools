@@ -49,6 +49,7 @@ Last-modified: ${lmTime}
 #TODO: Add lang variable, perhaps some automation:
 #http://search.cpan.org/~ambs/Lingua-Identify-0.56/lib/Lingua/Identify.pm
 
+our %CanOverride;
 our %PageVars=(
        'caching' => undef,
        'debug' => undef,
@@ -62,15 +63,6 @@ our %PageVars=(
        'theme' => undef,
        'title' => undef,
       );
-
-our %CanOverride=(
-	       'debug' => 'b',
-	       'help' => 'b',
-	       'preload' => 'b',
-	       'raw' => 'b',
-	       'theme' => 's',
-	       'title' => 's',
-	      );
 
 our %Helpstr=(
 	  'caching' => 'Caching enabled. Default __on__.',
@@ -99,7 +91,8 @@ our $hasSiteConf = 0;
 if ( -f "strapdown.conf") {
   $hasSiteConf=1;
   my $settings = LoadFile("strapdown.conf");
-  transferValidVars(\%PageVars, $settings);
+  transferValidVars(\%PageVars, $settings->{'PageVars'});
+  transferValidVars(\%CanOverride, $settings->{'CanOverride'}, \%PageVars);
 }
 
 open(CONTENT,"<$lName");
