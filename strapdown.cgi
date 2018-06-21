@@ -216,7 +216,7 @@ sub createPage {
       $linklist.="\n" if ($linklist);
       $linklist.='  <link rel="stylesheet" href="'.$_.'" as="style">';
     }
-    #$preload.="${linklist}";
+    $preload.="${linklist}";
     #$preload.="<style>.navbar{display:none}</style>";
   }
   if ( $ENV{'H2_PUSH'}) {
