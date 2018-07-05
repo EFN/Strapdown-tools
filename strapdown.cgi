@@ -106,14 +106,16 @@ if ($suffix eq "mdh" ) {
   transferValidVars(\%PageVars, $settings);
 }
 
-my %params=normalizeQuery($ENV{'QUERY_STRING'},\%CanOverride);
+my ($params, $canCache)=normalizeQuery($ENV{'QUERY_STRING'},\%CanOverride);
+my %params=%$params;
+
 my $QSTRING=qstringFromParams(\%params);
 
 if ($QSTRING ne $ENV{'QUERY_STRING'}) {
   #print "Status: 307 Temporary Redirect\n";
   print "Status: 308 Permanent Redirect\n";
-  printf "Cache-Control: max-age=%d\n", 7*24*60*60;
-  printf "Location: %s?%s\n", $ENV{'REDIRECT_URL'}, $QSTRING;
+  printf "Cache-Control: max-age=%d\n", ($canCache)?7*24*60*60:5;
+  printf "Location: %s%s\n", $ENV{'REDIRECT_URL'}, ($QSTRING)?'?'.$QSTRING:'';
   print "Content-type: text/plain\n";
   print "\n";
   print "Normalizing URL\n";
@@ -435,6 +437,7 @@ sub normalizeQuery {
   my $query=$_[0];
   my $can_override=$_[1];
 
+  my $canCache=1;
   my %params;
   foreach (split('&', $query)) {
     (my $key, my $value)=split('=',$_);
@@ -444,9 +447,11 @@ sub normalizeQuery {
     } elsif ($can_override->{$key}) {
       $params{$key}=$value;
       $PageVars{$key}=$params{$key};
+    } elsif (exists $PageVars{$key}) {
+      $canCache=0;
     }
   }
-  return %params;
+  return (\%params, $canCache);
 }
 
 sub qstringFromParams {
