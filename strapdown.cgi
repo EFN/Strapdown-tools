@@ -107,9 +107,8 @@ if ($suffix eq "mdh" ) {
 }
 
 my ($params, $canCache)=normalizeQuery($ENV{'QUERY_STRING'},\%CanOverride);
-my %params=%$params;
 
-my $QSTRING=qstringFromParams(\%params);
+my $QSTRING=qstringFromParams($params);
 
 if ($QSTRING ne $ENV{'QUERY_STRING'}) {
   #print "Status: 307 Temporary Redirect\n";
@@ -241,7 +240,7 @@ sub createPage {
 ";
   logg INFO, "PRELOAD: ".$preload;
 
-  my %redirTarget=(%params);
+  my %redirTarget=(%$params);
   $redirTarget{'raw'}='1';
   my $redirectTarget='?'.qstringFromParams(\%redirTarget);
 
