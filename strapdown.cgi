@@ -46,6 +46,61 @@ Last-modified: ${lmTime}
   }
 }
 
+
+our %ACCEPT_OUT = (
+		   'text/html' => 1.0,
+		   'text/markdown' => 0.8,
+		   'text/raw' => 0.7,
+	     );
+
+
+{
+  my @ACCEPT_IN=split(',',$ENV{'HTTP_ACCEPT'});
+  foreach (@ACCEPT_IN) {
+    (my $type, my $q)=split(';',$_);
+    (my $tm, my $ts)=split('/', $type);
+    $q = ($q && $q=~/q=(\d(\.\d+)?)/) ? $1 : 1;
+    $ACCEPT{$tm}{$ts}=$q;
+  }
+  if (!$ACCEPT{'*'}{'*'}) {
+    $ACCEPT{'*'}{'*'}=0.0;
+  }
+  my $default=$ACCEPT{'*'}{'*'};
+  while ((my $tm, my $hash) = each (%ACCEPT)) {
+    if (! $hash->{'*'}) {
+      $hash->{'*'}=$default;
+    }
+  }
+}
+
+foreach my $type (keys %ACCEPT_OUT) {
+  (my $tm, my $ts)=split('/', $type);
+
+  my $adjust;
+  if ($ACCEPT{$tm}) {
+    if ($ACCEPT{$tm}{$ts}) {
+      $adjust=$ACCEPT{$tm}{$ts};
+    }
+    else {
+      $adjust=$ACCEPT{$tm}{'*'};
+    }
+  }
+  else {
+    $adjust=$ACCEPT{'*'}{'*'};
+  }
+
+
+  $ACCEPT_OUT{$type}*=$adjust;
+}
+$bestType='';
+$bestValue=0;
+foreach my $type (keys %ACCEPT_OUT) {
+  if ($ACCEPT_OUT{$type}>$bestValue) {
+    $bestType=$type;
+    $bestValue=$ACCEPT_OUT{$type};
+  }
+}
+
 #TODO: Add lang variable, perhaps some automation:
 #http://search.cpan.org/~ambs/Lingua-Identify-0.56/lib/Lingua/Identify.pm
 
@@ -144,6 +199,10 @@ local $/;
 my $body.=<CONTENT>;
 close(CONTENT);
 
+if ($bestType eq 'text/raw' || $bestType eq 'text/markdown') {
+  $PageVars{'raw'}=1;
+}
+
 debug() if (str2bool($PageVars{'debug'}));
 help() if (str2bool($PageVars{'help'}));
 
@@ -158,7 +217,20 @@ sub createRaw {
   logg DEBUG, "Caching: ".$cache;
   $lmTime='' if (! $cache);
 
+  $style='X-Style:';
+  my $first=1;
+  foreach (@styles) {
+    if ($first) {
+      $first=0;
+    }
+    else {
+      $style.=",";
+    }
+    $style.=$_;
+  }
+
   return "Content-type: text/plain
+$style
 ${lmTime}
 
 ${body}
@@ -169,6 +241,18 @@ sub createPage {
   my $body=shift;
   my $vars=shift;
   logg DEBUG, "raw value is: '". setAndTrue($vars->{'raw'})."'";
+  print "Vary: Accept\n";
+
+  ($vars->{'theme'})='readable' if (! $vars->{'theme'});
+  my $theme=$vars->{'theme'};
+  my $scriptbase=$vars->{'scriptbase'};
+
+  our @styles=(
+	       "${scriptbase}/v/0.3/strapdown.css",
+	       "${scriptbase}/v/0.3/themes/bootstrap-responsive.min.css",
+	       "${scriptbase}/v/0.3/themes/${theme}.min.css"
+	      );
+
   if (str2bool($vars->{'raw'})) {
     return createRaw($body, $vars);
   }
@@ -176,16 +260,10 @@ sub createPage {
   if (! $vars->{'title'}) {
     ($vars->{'title'})=$ENV{'PATH_INFO'}=~/([^\/]+)$/;
   }
-  if (! $vars->{'theme'}) {
-    ($vars->{'theme'})='readable';
-  }
-
   logg DEBUG, "Caching is defined as ".$vars->{'caching'};
   my $cache=(! defined($vars->{'caching'})) || str2bool($vars->{'caching'});
   logg DEBUG, "Caching: ".$cache;
   $lmTime='' if (! $cache);
-  my $scriptbase=$vars->{'scriptbase'};
-  my $theme=$vars->{'theme'};
   my $preload="";
   my $shortcuticon;
   my $shortcuticon_type;
@@ -206,11 +284,6 @@ sub createPage {
       }
     }
   }
-  my @styles=(
-	   "${scriptbase}/v/0.3/strapdown.css",
-	   "${scriptbase}/v/0.3/themes/bootstrap-responsive.min.css",
-	   "${scriptbase}/v/0.3/themes/${theme}.min.css"
-	  );
   my $linklist;
   if ((! defined($vars->{'preload'})) || str2bool($vars->{'preload'})) {
     foreach (@styles) {
