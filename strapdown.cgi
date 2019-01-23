@@ -146,7 +146,7 @@ close(CONTENT);
 
 debug() if (str2bool($PageVars{'debug'}));
 help() if (str2bool($PageVars{'help'}));
-  
+
 print createPage($body,\%PageVars);
 
 sub createRaw {
