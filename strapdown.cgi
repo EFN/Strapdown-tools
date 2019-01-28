@@ -14,6 +14,7 @@
 #
 
 our $logLevel;
+use utf8;
 
 my @module = ("use File::stat;","use Date::Format","use Date::Parse qw(str2time)","use YAML::XS;", "use YAML::XS 'LoadFile';");
 for (@module) {
@@ -96,6 +97,7 @@ if ( -f "strapdown.conf") {
 }
 
 open(CONTENT,"<$lName");
+binmode CONTENT, ":raw"; 
 if ($suffix eq "mdh" ) {
   my $headers='';
   while (my $line=<CONTENT>) {
@@ -103,6 +105,8 @@ if ($suffix eq "mdh" ) {
     last if ($line eq "...\n" );
   }
   my $settings = Load($headers);
+  #Ugly hack
+  utf8::encode($settings->{'title'});
   transferValidVars(\%PageVars, $settings);
 }
 
